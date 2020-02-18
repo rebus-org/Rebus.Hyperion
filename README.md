@@ -8,3 +8,13 @@ Provides a [Hyperion](https://github.com/akkadotnet/Hyperion) serializer for [Re
 
 ---
 
+Just go
+
+```csharp
+Configure.With(...)
+	.(...)
+	.Serializer(s => s.UseHyperion())
+	.Start();
+```
+
+and have fun serializing.
