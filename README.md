@@ -13,7 +13,7 @@ Just go
 ```csharp
 Configure.With(...)
 	.(...)
-	.Serializer(s => s.UseHyperion())
+	.Serialization(s => s.UseHyperion())
 	.Start();
 ```
 
