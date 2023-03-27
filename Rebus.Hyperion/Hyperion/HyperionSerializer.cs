@@ -8,58 +8,57 @@ using Rebus.Serialization;
 
 #pragma warning disable 1998
 
-namespace Rebus.Hyperion
+namespace Rebus.Hyperion;
+
+/// <summary>
+/// Rebus serializer that uses the binary Hyperion serializer to provide a robust POCO serialization that supports everything that you would expect from a modern serializer
+/// </summary>
+class HyperionSerializer : ISerializer
 {
     /// <summary>
-    /// Rebus serializer that uses the binary Hyperion serializer to provide a robust POCO serialization that supports everything that you would expect from a modern serializer
+    /// Mime type for Hyperion
     /// </summary>
-    class HyperionSerializer : ISerializer
+    public const string HyperionContentType = "application/x-hyperion";
+
+    readonly Serializer _serializer = new Serializer();
+
+    /// <summary>
+    /// Serializes the given <see cref="Message"/> into a <see cref="TransportMessage"/> using the Hyperion format,
+    /// adding a <see cref="Headers.ContentType"/> header with the value of <see cref="HyperionContentType"/>
+    /// </summary>
+    public async Task<TransportMessage> Serialize(Message message)
     {
-        /// <summary>
-        /// Mime type for Hyperion
-        /// </summary>
-        public const string HyperionContentType = "application/x-hyperion";
-
-        readonly Serializer _serializer = new Serializer();
-
-        /// <summary>
-        /// Serializes the given <see cref="Message"/> into a <see cref="TransportMessage"/> using the Hyperion format,
-        /// adding a <see cref="Headers.ContentType"/> header with the value of <see cref="HyperionContentType"/>
-        /// </summary>
-        public async Task<TransportMessage> Serialize(Message message)
+        using (var destination = new MemoryStream())
         {
-            using (var destination = new MemoryStream())
-            {
-                _serializer.Serialize(message.Body, destination);
+            _serializer.Serialize(message.Body, destination);
 
-                var headers = message.Headers.Clone();
+            var headers = message.Headers.Clone();
 
-                headers[Headers.ContentType] = HyperionContentType;
+            headers[Headers.ContentType] = HyperionContentType;
 
-                return new TransportMessage(headers, destination.ToArray());
-            }
+            return new TransportMessage(headers, destination.ToArray());
+        }
+    }
+
+    /// <summary>
+    /// Deserializes the given <see cref="TransportMessage"/> back into a <see cref="Message"/>. Expects a
+    /// <see cref="Headers.ContentType"/> header with a value of <see cref="HyperionContentType"/>, otherwise
+    /// it will not attempt to deserialize the message.
+    /// </summary>
+    public async Task<Message> Deserialize(TransportMessage transportMessage)
+    {
+        var contentType = transportMessage.Headers.GetValue(Headers.ContentType);
+
+        if (contentType != HyperionContentType)
+        {
+            throw new FormatException($"Unknown content type: '{contentType}' - must be '{HyperionContentType}' for the JSON serialier to work");
         }
 
-        /// <summary>
-        /// Deserializes the given <see cref="TransportMessage"/> back into a <see cref="Message"/>. Expects a
-        /// <see cref="Headers.ContentType"/> header with a value of <see cref="HyperionContentType"/>, otherwise
-        /// it will not attempt to deserialize the message.
-        /// </summary>
-        public async Task<Message> Deserialize(TransportMessage transportMessage)
+        using (var source = new MemoryStream(transportMessage.Body))
         {
-            var contentType = transportMessage.Headers.GetValue(Headers.ContentType);
+            var body = _serializer.Deserialize(source);
 
-            if (contentType != HyperionContentType)
-            {
-                throw new FormatException($"Unknown content type: '{contentType}' - must be '{HyperionContentType}' for the JSON serialier to work");
-            }
-
-            using (var source = new MemoryStream(transportMessage.Body))
-            {
-                var body = _serializer.Deserialize(source);
-
-                return new Message(transportMessage.Headers.Clone(), body);
-            }
+            return new Message(transportMessage.Headers.Clone(), body);
         }
     }
 }

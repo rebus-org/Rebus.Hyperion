@@ -1,10 +1,9 @@
 ﻿using Rebus.Serialization;
 using Rebus.Tests.Contracts.Serialization;
 
-namespace Rebus.Hyperion.Tests
+namespace Rebus.Hyperion.Tests;
+
+public class HyperionSerializerFactory : ISerializerFactory
 {
-    public class HyperionSerializerFactory : ISerializerFactory
-    {
-        public ISerializer GetSerializer() => new HyperionSerializer();
-    }
+    public ISerializer GetSerializer() => new HyperionSerializer();
 }
